@@ -4,26 +4,20 @@ CREATE FUNCTION process_cron_field(field TEXT, min_val INT, max_val INT)
 RETURNS JSON
 DETERMINISTIC
 BEGIN
-  DECLARE base_val INT;
-  DECLARE step INT;
-  DECLARE lst TEXT DEFAULT '';
-  DECLARE i INT;
-  DECLARE comma_array JSON;
-  DECLARE arr_length INT;
-  
-  -- Variablen für den Komma-Zweig
-  DECLARE splitted TEXT DEFAULT '';
-  DECLARE part TEXT DEFAULT '';
   DECLARE result TEXT DEFAULT '';
-  DECLARE tmp TEXT DEFAULT '';
+  DECLARE part TEXT;
+  DECLARE tmp TEXT;
+  DECLARE i INT;
   DECLARE start_val INT;
   DECLARE end_val INT;
+  DECLARE step INT;
+  DECLARE splitted TEXT DEFAULT field;
   
   IF field = '*' THEN
-    RETURN JSON_OBJECT('op', 'ALL');
-    
-  ELSEIF field LIKE '%,%' THEN
-    SET splitted = field;
+    RETURN JSON_OBJECT('op','ALL');
+  END IF;
+  
+  IF LOCATE(',', field) > 0 THEN
     WHILE splitted <> '' DO
       IF LOCATE(',', splitted) > 0 THEN
         SET part = SUBSTRING_INDEX(splitted, ',', 1);
@@ -33,111 +27,82 @@ BEGIN
         SET splitted = '';
       END IF;
       
-      IF part LIKE '%/%' THEN
-        IF part LIKE '%-%' THEN
-          -- Kombinierter Fall: Bereich mit Schritt, z.B. 5-20/5
+      IF LOCATE('/', part) > 0 THEN
+        IF LOCATE('-', part) > 0 THEN
           SET start_val = CAST(SUBSTRING_INDEX(part, '-', 1) AS UNSIGNED);
           SET end_val = CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(part, '/', 1), '-', -1) AS UNSIGNED);
           SET step = CAST(SUBSTRING_INDEX(part, '/', -1) AS UNSIGNED);
           SET i = start_val;
           SET tmp = '';
           WHILE i <= end_val DO
-            IF tmp = '' THEN
-              SET tmp = CAST(i AS CHAR);
-            ELSE
-              SET tmp = CONCAT(tmp, ',', CAST(i AS CHAR));
-            END IF;
+            SET tmp = IF(tmp = '', CAST(i AS CHAR), CONCAT(tmp, ',', CAST(i AS CHAR)));
             SET i = i + step;
           END WHILE;
           SET part = tmp;
         ELSE
-          -- Nur Schrittangabe, z.B. */5 oder 5/5
-          IF LEFT(part, 1) = '*' THEN 
-            SET base_val = min_val;
+          IF LEFT(part,1) = '*' THEN 
+            SET i = min_val;
           ELSE 
-            SET base_val = CAST(SUBSTRING_INDEX(part, '/', 1) AS UNSIGNED);
+            SET i = CAST(SUBSTRING_INDEX(part, '/', 1) AS UNSIGNED);
           END IF;
           SET step = CAST(SUBSTRING_INDEX(part, '/', -1) AS UNSIGNED);
-          SET i = base_val;
           SET tmp = '';
           WHILE i <= max_val DO
-            IF tmp = '' THEN
-              SET tmp = CAST(i AS CHAR);
-            ELSE
-              SET tmp = CONCAT(tmp, ',', CAST(i AS CHAR));
-            END IF;
+            SET tmp = IF(tmp = '', CAST(i AS CHAR), CONCAT(tmp, ',', CAST(i AS CHAR)));
             SET i = i + step;
           END WHILE;
           SET part = tmp;
         END IF;
-      ELSEIF part LIKE '%-%' THEN
+      ELSEIF LOCATE('-', part) > 0 THEN
         SET start_val = CAST(SUBSTRING_INDEX(part, '-', 1) AS UNSIGNED);
         SET end_val = CAST(SUBSTRING_INDEX(part, '-', -1) AS UNSIGNED);
         SET tmp = '';
         WHILE start_val <= end_val DO
-          IF tmp = '' THEN
-            SET tmp = CAST(start_val AS CHAR);
-          ELSE
-            SET tmp = CONCAT(tmp, ',', CAST(start_val AS CHAR));
-          END IF;
+          SET tmp = IF(tmp = '', CAST(start_val AS CHAR), CONCAT(tmp, ',', CAST(start_val AS CHAR)));
           SET start_val = start_val + 1;
         END WHILE;
         SET part = tmp;
       END IF;
       
-      IF result = '' THEN
-        SET result = part;
-      ELSE
-        SET result = CONCAT(result, ',', part);
-      END IF;
+      SET result = IF(result = '', part, CONCAT(result, ',', part));
     END WHILE;
-    RETURN JSON_OBJECT('op', 'IN', 'val', result);
+    RETURN JSON_OBJECT('op','IN','val', result);
     
-  ELSEIF field LIKE '%/%' THEN
-    IF field LIKE '%-%' THEN
-      -- Kombinierter Fall: Bereich mit Schritt, z.B. 5-20/5
+  ELSEIF LOCATE('/', field) > 0 THEN
+    IF LOCATE('-', field) > 0 THEN
       SET start_val = CAST(SUBSTRING_INDEX(field, '-', 1) AS UNSIGNED);
       SET end_val = CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(field, '/', 1), '-', -1) AS UNSIGNED);
       SET step = CAST(SUBSTRING_INDEX(field, '/', -1) AS UNSIGNED);
       SET i = start_val;
-      SET lst = '';
+      SET result = '';
       WHILE i <= end_val DO
-        IF lst = '' THEN
-          SET lst = CAST(i AS CHAR);
-        ELSE
-          SET lst = CONCAT(lst, ',', CAST(i AS CHAR));
-        END IF;
+        SET result = IF(result = '', CAST(i AS CHAR), CONCAT(result, ',', CAST(i AS CHAR)));
         SET i = i + step;
       END WHILE;
-      RETURN JSON_OBJECT('op', 'IN', 'val', lst);
+      RETURN JSON_OBJECT('op','IN','val', result);
     ELSE
-      IF LEFT(field, 1) = '*' THEN 
-        SET base_val = min_val;
-      ELSE 
-        SET base_val = CAST(SUBSTRING_INDEX(field, '/', 1) AS UNSIGNED);
+      IF LEFT(field,1) = '*' THEN
+        SET i = min_val;
+      ELSE
+        SET i = CAST(SUBSTRING_INDEX(field, '/', 1) AS UNSIGNED);
       END IF;
       SET step = CAST(SUBSTRING_INDEX(field, '/', -1) AS UNSIGNED);
-      SET i = base_val;
-      SET lst = '';
+      SET result = '';
       WHILE i <= max_val DO
-        IF lst = '' THEN
-          SET lst = CAST(i AS CHAR);
-        ELSE
-          SET lst = CONCAT(lst, ',', CAST(i AS CHAR));
-        END IF;
+        SET result = IF(result = '', CAST(i AS CHAR), CONCAT(result, ',', CAST(i AS CHAR)));
         SET i = i + step;
       END WHILE;
-      RETURN JSON_OBJECT('op', 'IN', 'val', lst);
+      RETURN JSON_OBJECT('op','IN','val', result);
     END IF;
     
-  ELSEIF field LIKE '%-%' THEN
-    RETURN JSON_OBJECT('op', 'BETWEEN', 'val', JSON_EXTRACT(JSON_ARRAY(
+  ELSEIF LOCATE('-', field) > 0 THEN
+    RETURN JSON_OBJECT('op','BETWEEN','val', JSON_EXTRACT(JSON_ARRAY(
       CAST(SUBSTRING_INDEX(field, '-', 1) AS UNSIGNED),
       CAST(SUBSTRING_INDEX(field, '-', -1) AS UNSIGNED)
     ), '$'));
     
   ELSE
-    RETURN JSON_OBJECT('op', '=', 'val', field);
+    RETURN JSON_OBJECT('op','=', 'val', field);
   END IF;
 END$$
 DELIMITER ;
