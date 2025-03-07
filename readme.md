@@ -62,12 +62,6 @@ Once the UDF is installed and registered, you can call it in your SQL queries. F
 SELECT cron_next_execution('30 5-29/2,31-59/4 */3 4/5 * 1-3') AS next_execution;
 ```
 
-This will return the next execution timestamp as an integer (Unix timestamp). You can convert it to a readable datetime format using MariaDB's `FROM_UNIXTIME()` function if desired:
-
-```sql
-SELECT FROM_UNIXTIME(cron_next_execution('30 5-29/2,31-59/4 */3 4/5 * 1-3')) AS next_execution_datetime;
-```
-
 ## Summary
 
 - **Stored Functions:** Provide a pure SQL solution for parsing and scheduling cron jobs.
