@@ -30,7 +30,7 @@ BEGIN
   DECLARE cron_min JSON;
   DECLARE cron_sec JSON;
 
-  /* Vorgeparste Variablen für jedes Feld */
+  /* Vorgeparste Variablen */
   DECLARE month_op VARCHAR(10);
   DECLARE month_eq INT DEFAULT 0;
   DECLARE month_in TEXT DEFAULT NULL;
@@ -63,7 +63,7 @@ BEGIN
   DECLARE sec_between_end INT DEFAULT 0;
   DECLARE sec_in TEXT DEFAULT NULL;
 
-  /* Cron-Ausdruck in JSON umwandeln und Felder extrahieren */
+  /* Umwandlung des Cron-Ausdrucks in JSON */
   SET cron_def = cron_to_json(cron_expr);
   SET cron_month = JSON_EXTRACT(cron_def, '$.month');
   SET cron_dom   = JSON_EXTRACT(cron_def, '$.day_of_month');
@@ -144,10 +144,10 @@ BEGIN
          (dom_op = 'ALL' AND dow_op = 'ALL')
          OR (dom_op <> 'ALL' AND dow_op <> 'ALL' AND (
               match_value(DAYOFMONTH(candidate_date), dom_op, dom_eq, dom_between_start, dom_between_end, dom_in)
-              OR match_value(((WEEKDAY(candidate_date)+1) MOD 7), dow_op, dow_eq, 0, 0, dow_in)
+              OR match_value(WEEKDAY(candidate_date), dow_op, dow_eq - 1, 0, 0, dow_in)
          ))
          OR (dom_op <> 'ALL' AND match_value(DAYOFMONTH(candidate_date), dom_op, dom_eq, dom_between_start, dom_between_end, dom_in))
-         OR (dow_op <> 'ALL' AND match_value(((WEEKDAY(candidate_date)+1) MOD 7), dow_op, dow_eq, 0, 0, dow_in))
+         OR (dow_op <> 'ALL' AND match_value(WEEKDAY(candidate_date), dow_op, dow_eq - 1, 0, 0, dow_in))
     ) THEN
       SET candidate_date = DATE_ADD(candidate_date, INTERVAL 1 DAY);
       ITERATE outer_loop;
