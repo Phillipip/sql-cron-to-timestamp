@@ -74,4 +74,3 @@ SELECT FROM_UNIXTIME(cron_next_execution('30 5-29/2,31-59/4 */3 4/5 * 1-3')) AS 
 - **UDF Variant:** Offers improved performance by implementing the logic in C. Follow the steps above to compile, install, and register the UDF, then query it as shown.
 
 Feel free to adjust the instructions as needed for your environment.
-```
