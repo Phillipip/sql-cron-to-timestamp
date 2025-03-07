@@ -144,10 +144,10 @@ BEGIN
          (dom_op = 'ALL' AND dow_op = 'ALL')
          OR (dom_op <> 'ALL' AND dow_op <> 'ALL' AND (
               match_value(DAYOFMONTH(candidate_date), dom_op, dom_eq, dom_between_start, dom_between_end, dom_in)
-              OR match_value(WEEKDAY(candidate_date), dow_op, dow_eq, 0, 0, dow_in)
+              OR match_value(((WEEKDAY(candidate_date)+1) MOD 7), dow_op, dow_eq, 0, 0, dow_in)
          ))
          OR (dom_op <> 'ALL' AND match_value(DAYOFMONTH(candidate_date), dom_op, dom_eq, dom_between_start, dom_between_end, dom_in))
-         OR (dow_op <> 'ALL' AND match_value(WEEKDAY(candidate_date), dow_op, dow_eq, 0, 0, dow_in))
+         OR (dow_op <> 'ALL' AND match_value(((WEEKDAY(candidate_date)+1) MOD 7), dow_op, dow_eq, 0, 0, dow_in))
     ) THEN
       SET candidate_date = DATE_ADD(candidate_date, INTERVAL 1 DAY);
       ITERATE outer_loop;
