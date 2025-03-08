@@ -33,6 +33,8 @@ BEGIN
   /* Vorgeparste Variablen */
   DECLARE month_op VARCHAR(10);
   DECLARE month_eq INT DEFAULT 0;
+  DECLARE month_between_start INT DEFAULT 0;
+  DECLARE month_between_end INT DEFAULT 0;
   DECLARE month_in TEXT DEFAULT NULL;
   
   DECLARE dom_op VARCHAR(10);
@@ -43,6 +45,8 @@ BEGIN
   
   DECLARE dow_op VARCHAR(10);
   DECLARE dow_eq INT DEFAULT 0;
+  DECLARE dow_between_start INT DEFAULT 0;
+  DECLARE dow_between_end INT DEFAULT 0;
   DECLARE dow_in TEXT DEFAULT NULL;
   
   DECLARE hour_op VARCHAR(10);
@@ -76,6 +80,9 @@ BEGIN
   SET month_op = JSON_UNQUOTE(JSON_EXTRACT(cron_month, '$.op'));
   IF month_op = '=' THEN
     SET month_eq = CAST(JSON_UNQUOTE(JSON_EXTRACT(cron_month, '$.val')) AS UNSIGNED);
+  ELSEIF month_op = 'BETWEEN' THEN
+    SET month_between_start = CAST(JSON_UNQUOTE(JSON_EXTRACT(cron_month, '$.val[0]')) AS UNSIGNED);
+    SET month_between_end = CAST(JSON_UNQUOTE(JSON_EXTRACT(cron_month, '$.val[1]')) AS UNSIGNED);
   ELSEIF month_op = 'IN' THEN
     SET month_in = JSON_UNQUOTE(JSON_EXTRACT(cron_month, '$.val'));
   END IF;
@@ -95,6 +102,9 @@ BEGIN
   SET dow_op = JSON_UNQUOTE(JSON_EXTRACT(cron_dow, '$.op'));
   IF dow_op = '=' THEN
     SET dow_eq = CAST(JSON_UNQUOTE(JSON_EXTRACT(cron_dow, '$.val')) AS UNSIGNED);
+  ELSEIF dow_op = 'BETWEEN' THEN
+    SET dow_between_start = CAST(JSON_UNQUOTE(JSON_EXTRACT(cron_dow, '$.val[0]')) AS UNSIGNED);
+    SET dow_between_end   = CAST(JSON_UNQUOTE(JSON_EXTRACT(cron_dow, '$.val[1]')) AS UNSIGNED);
   ELSEIF dow_op = 'IN' THEN
     SET dow_in = JSON_UNQUOTE(JSON_EXTRACT(cron_dow, '$.val'));
   END IF;
@@ -133,8 +143,8 @@ BEGIN
   END IF;
 
   outer_loop: WHILE candidate_date < max_date AND found = FALSE DO
-    /* Monat prüfen */
-    IF NOT match_value(MONTH(candidate_date), month_op, month_eq, 0, 0, month_in) THEN
+	/* Monat prüfen */
+    IF NOT match_value(MONTH(candidate_date), month_op, month_eq, month_between_start, month_between_end, month_in) THEN
       SET candidate_date = DATE_ADD(candidate_date, INTERVAL 1 DAY);
       ITERATE outer_loop;
     END IF;
@@ -144,10 +154,10 @@ BEGIN
          (dom_op = 'ALL' AND dow_op = 'ALL')
          OR (dom_op <> 'ALL' AND dow_op <> 'ALL' AND (
               match_value(DAYOFMONTH(candidate_date), dom_op, dom_eq, dom_between_start, dom_between_end, dom_in)
-              OR match_value(WEEKDAY(candidate_date), dow_op, dow_eq - 1, 0, 0, dow_in)
+              OR match_value(MOD(WEEKDAY(candidate_date)+1,7), dow_op, dow_eq, dow_between_start, dow_between_end, dow_in)
          ))
          OR (dom_op <> 'ALL' AND match_value(DAYOFMONTH(candidate_date), dom_op, dom_eq, dom_between_start, dom_between_end, dom_in))
-         OR (dow_op <> 'ALL' AND match_value(WEEKDAY(candidate_date), dow_op, dow_eq - 1, 0, 0, dow_in))
+         OR (dow_op <> 'ALL' AND match_value(MOD(WEEKDAY(candidate_date)+1,7), dow_op, dow_eq, dow_between_start, dow_between_end, dow_in))
     ) THEN
       SET candidate_date = DATE_ADD(candidate_date, INTERVAL 1 DAY);
       ITERATE outer_loop;
@@ -155,11 +165,11 @@ BEGIN
     
     /* Startwerte für Stunde/Minute/Sekunde */
     IF candidate_date = CURDATE() THEN
-      SET start_hour   = HOUR(current);
+      SET start_hour = HOUR(current);
       SET start_minute = MINUTE(current);
       SET start_second = SECOND(current);
     ELSE
-      SET start_hour   = 0;
+      SET start_hour = 0;
       SET start_minute = 0;
       SET start_second = 0;
     END IF;
