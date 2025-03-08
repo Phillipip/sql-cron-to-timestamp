@@ -62,6 +62,17 @@ Once the UDF is installed and registered, you can call it in your SQL queries. F
 SELECT cron_next_execution('30 5-29/2,31-59/4 */3 4/5 * 1-3') AS next_execution;
 ```
 
+## Benchmarks
+
+- **Stored Functions:**  
+  - v0.1: ~650ms for 100 queries  
+  - v0.4: ~350ms for 100 queries  
+  - v0.7: ~160ms for 100 queries
+
+- **UDF Variant:**  
+  - ~3ms for 100 queries
+
+
 ## Summary
 
 - **Stored Functions:** Provide a pure SQL solution for parsing and scheduling cron jobs.
