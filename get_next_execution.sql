@@ -34,7 +34,6 @@ BEGIN
   DECLARE m INT DEFAULT 0;
   DECLARE s INT DEFAULT 0;
   
-  -- Exakt 6 Felder voraussetzen
   IF (LENGTH(TRIM(cron_expr)) - LENGTH(REPLACE(cron_expr, ' ', '')) + 1) <> 6 THEN
          RETURN NULL;
   END IF;
@@ -48,30 +47,23 @@ BEGIN
   SET month_field = SUBSTRING_INDEX(SUBSTRING_INDEX(cron_expr, ' ', 5), ' ', -1);
   SET dow_field = SUBSTRING_INDEX(cron_expr, ' ', -1);
   
-  -- Felder parsen
   SET allowed_sec = parse_cron_field(sec_field, 0, 59, IF(sec_field = '*', 1, 0));
   SET allowed_min = parse_cron_field(min_field, 0, 59, IF(min_field = '*', 1, 0));
   SET allowed_hour = parse_cron_field(hour_field, 0, 23, IF(hour_field = '*', 1, 0));
   SET allowed_month = parse_cron_field(month_field, 1, 12, IF(month_field = '*', 1, 0));
   
-  IF dom_field = '*' THEN
-       SET dom_all = 1;
-  END IF;
+  IF dom_field = '*' THEN SET dom_all = 1; END IF;
   SET allowed_dom = parse_cron_field(dom_field, 1, 31, IF(dom_field = '*', 1, 0));
   
-  IF dow_field = '*' THEN
-       SET dow_all = 1;
-  END IF;
-  SET allowed_dow = parse_cron_field(dow_field, 0, 6, dow_all);
+  IF dow_field = '*' THEN SET dow_all = 1; END IF;
+  SET allowed_dow = parse_cron_field(dow_field, 0, 6, IF(dow_field = '*', 1, 0));
   
   day_loop: WHILE day_offset < 365 DO
          SET candidate_date = DATE_ADD(DATE(dt_now), INTERVAL day_offset DAY);
-         -- Monat prüfen
          IF FIND_IN_SET(MONTH(candidate_date), allowed_month) = 0 THEN
              SET day_offset = day_offset + 1;
              ITERATE day_loop;
          END IF;
-         -- Prüfe Tag des Monats und Wochentag gemäß Cron-Logik:
          IF (dom_all = 0 AND dow_all = 0) THEN
              IF (FIND_IN_SET(DAY(candidate_date), allowed_dom) = 0 
                  AND FIND_IN_SET(DAYOFWEEK(candidate_date)-1, allowed_dow) = 0) THEN
