@@ -129,7 +129,7 @@ static time_t next_execution(const CronSchedule *sch, time_t now) {
     today_tm.tm_sec = 0;
     time_t today = mktime(&today_tm);
     int days;
-    for (days = 0; days < 365; days++) {
+    for (days = 0; days < 366; days++) {
         time_t candidate_day = today + days * 86400;
         struct tm cand_tm;
         localtime_r(&candidate_day, &cand_tm);
