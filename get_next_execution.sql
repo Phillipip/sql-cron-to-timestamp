@@ -58,7 +58,7 @@ BEGIN
   IF dow_field = '*' THEN SET dow_all = 1; END IF;
   SET allowed_dow = parse_cron_field(dow_field, 0, 6, IF(dow_field = '*', 1, 0));
   
-  day_loop: WHILE day_offset < 365 DO
+  day_loop: WHILE day_offset < 366 DO
          SET candidate_date = DATE_ADD(DATE(dt_now), INTERVAL day_offset DAY);
          IF FIND_IN_SET(MONTH(candidate_date), allowed_month) = 0 THEN
              SET day_offset = day_offset + 1;
