@@ -18,6 +18,7 @@ To get the next execution timestamp using the stored functions, simply run:
 
 ```sql
 SELECT get_next_execution('30 5-29/2,31-59/4 */3 4/5 * 1-3') AS next_execution;
+SELECT get_next_execution('30 5-29/2,31-59/4 */3 4/5 * 1-3', '2025-03-11 12:00:00') AS next_execution;
 ```
 
 ### Using the UDF Variant
@@ -60,9 +61,10 @@ Once the UDF is installed and registered, you can call it in your SQL queries. F
 
 ```sql
 SELECT cron_next_execution('30 5-29/2,31-59/4 */3 4/5 * 1-3') AS next_execution;
+SELECT cron_next_execution('30 5-29/2,31-59/4 */3 4/5 * 1-3', '2025-03-11 12:00:00') AS next_execution;
 ```
 
-## Benchmarks
+## Benchmark
 
 - **Stored Functions:**  
   - v0.1: ~650ms for 100 queries  
