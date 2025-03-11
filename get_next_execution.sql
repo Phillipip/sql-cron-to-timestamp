@@ -1,6 +1,6 @@
 DROP FUNCTION IF EXISTS get_next_execution;
 DELIMITER $$
-CREATE FUNCTION get_next_execution(cron_expr TEXT)
+CREATE FUNCTION get_next_execution(cron_expr TEXT, dt_reference DATETIME)
 RETURNS TEXT
 DETERMINISTIC
 BEGIN
@@ -38,7 +38,7 @@ BEGIN
          RETURN NULL;
   END IF;
   
-  SET dt_now = NOW();
+  SET dt_now = IFNULL(dt_reference, NOW());
   
   SET sec_field = SUBSTRING_INDEX(cron_expr, ' ', 1);
   SET min_field = SUBSTRING_INDEX(SUBSTRING_INDEX(cron_expr, ' ', 2), ' ', -1);
