@@ -184,12 +184,16 @@ static time_t next_execution(const CronSchedule *sch, time_t now) {
 }
 
 my_bool cron_next_init(UDF_INIT *initid, UDF_ARGS *args, char *message) {
-    if (args->arg_count != 1) {
-        strcpy(message, "genau 1 Argument erwartet");
+    if (args->arg_count != 1 && args->arg_count != 2) {
+        strcpy(message, "1 oder 2 Argumente erwartet");
         return 1;
     }
     if (args->arg_type[0] != STRING_RESULT) {
-        strcpy(message, "Argument muss ein String sein");
+        strcpy(message, "1. Argument muss ein String (Cron-Ausdruck) sein");
+        return 1;
+    }
+    if (args->arg_count == 2 && args->arg_type[1] != STRING_RESULT) {
+        strcpy(message, "2. Argument (Startzeit) muss ein String sein");
         return 1;
     }
     initid->maybe_null = 1;
@@ -205,13 +209,28 @@ char *cron_next(UDF_INIT *initid, UDF_ARGS *args,
         *is_null = 1;
         return NULL;
     }
+
+    time_t start_time;
+    if (args->arg_count == 2 && args->args[1] != NULL) {
+        struct tm start_tm;
+        memset(&start_tm, 0, sizeof(start_tm));
+        if (strptime(args->args[1], "%Y-%m-%d %H:%M:%S", &start_tm) != NULL) {
+            start_time = mktime(&start_tm);
+        } else {
+            *is_null = 1;
+            return NULL;
+        }
+    } else {
+        start_time = time(NULL);
+    }
+
     CronSchedule schedule;
     if (parse_cron(cron_expr, &schedule) != 0) {
         *is_null = 1;
         return NULL;
     }
-    time_t now = time(NULL);
-    time_t next = next_execution(&schedule, now);
+
+    time_t next = next_execution(&schedule, start_time);
     if (next == -1) {
         *is_null = 1;
         return NULL;
