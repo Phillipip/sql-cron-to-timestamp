@@ -215,6 +215,7 @@ char *cron_next(UDF_INIT *initid, UDF_ARGS *args,
         struct tm start_tm;
         memset(&start_tm, 0, sizeof(start_tm));
         if (strptime(args->args[1], "%Y-%m-%d %H:%M:%S", &start_tm) != NULL) {
+            start_tm.tm_isdst = -1;
             start_time = mktime(&start_tm);
         } else {
             *is_null = 1;
